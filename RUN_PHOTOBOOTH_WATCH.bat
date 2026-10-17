@@ -12,4 +12,13 @@ if "%~1"=="" (
     exit /b 1
 )
 
-"%~dp0AI_Tach_Phong.exe" "%~1" --watch %2 %3 %4 %5 %6 %7 %8 %9
+set "APP=%~dp0AI_Tach_Phong.exe"
+if not exist "%APP%" set "APP=%~dp0dist\AI_Tach_Phong\AI_Tach_Phong.exe"
+if not exist "%APP%" (
+    echo [LOI] Khong tim thay AI_Tach_Phong.exe.
+    echo Hay chay BUILD_PORTABLE.bat hoac giai nen goi portable day du.
+    pause
+    exit /b 1
+)
+
+"%APP%" "%~1" --watch %2 %3 %4 %5 %6 %7 %8 %9
