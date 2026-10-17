@@ -1,8 +1,21 @@
 import argparse
+import os
 from pathlib import Path
 
 SUPPORTED = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 DEFAULT_MODEL = "birefnet-general"
+CUDA_DLL_HANDLES = []
+
+
+def register_cuda_dll_paths(ort):
+    """Expose CUDA/cuDNN DLL folders bundled in pip's NVIDIA packages."""
+    site_packages = Path(ort.__file__).resolve().parent.parent
+    nvidia_dir = site_packages / "nvidia"
+    if not nvidia_dir.is_dir() or not hasattr(os, "add_dll_directory"):
+        return 0
+    for dll_dir in nvidia_dir.glob("*/bin"):
+        CUDA_DLL_HANDLES.append(os.add_dll_directory(str(dll_dir)))
+    return len(CUDA_DLL_HANDLES)
 
 
 def parse_args():
@@ -80,6 +93,9 @@ def main():
         else ["CPUExecutionProvider"]
     )
     if providers[0] == "CUDAExecutionProvider":
+        dll_dir_count = register_cuda_dll_paths(ort)
+        if dll_dir_count:
+            print(f"Da dang ky {dll_dir_count} thu muc DLL CUDA/cuDNN.")
         if hasattr(ort, "preload_dlls"):
             print("Dang nap thu vien CUDA/cuDNN...")
             try:
@@ -95,7 +111,7 @@ def main():
         return 1
     active = session.inner_session.get_providers()
     if "CUDAExecutionProvider" in active:
-        print("Xu ly bang: GPU NVIDIA")
+        print("CUDA provider da khoi tao; dang thu suy luan tren GPU NVIDIA.")
     else:
         print("Xu ly bang: CPU (GPU CUDA chua san sang)")
 
@@ -109,6 +125,15 @@ def main():
                 options = {"decontaminate": not args.keep_model_colors}
                 result = remove(image, session=session, **options)
                 result.save(dst, "PNG")
+                if i == 1 and "CUDAExecutionProvider" in providers:
+                    active = session.inner_session.get_providers()
+                    if "CUDAExecutionProvider" in active:
+                        print("Xac nhan: anh dang duoc suy luan tren GPU NVIDIA.")
+                    else:
+                        print(
+                            "CANH BAO: CUDA/cuDNN loi; ONNX Runtime da chuyen sang CPU. "
+                            "Hay cap nhat driver NVIDIA de tuong thich voi CUDA 12.8."
+                        )
             ok += 1
             print(f"[{i}/{len(files)}] OK  {src.name}")
         except Exception as error:
