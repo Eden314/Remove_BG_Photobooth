@@ -13,16 +13,17 @@ def parse_args():
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        choices=("birefnet-general", "birefnet-portrait", "isnet-general-use"),
+        choices=(
+            "birefnet-general-lite",
+            "birefnet-general",
+            "birefnet-portrait",
+            "isnet-general-use",
+        ),
         help=(
-            "birefnet-general: nguoi va vat the; birefnet-portrait: uu tien chan dung; "
+            "birefnet-general: ban day du; birefnet-general-lite: nhe, nhanh hon; "
+            "birefnet-portrait: uu tien chan dung; "
             "isnet-general-use: mo hinh cu de doi chieu."
         ),
-    )
-    parser.add_argument(
-        "--alpha-matting",
-        action="store_true",
-        help="Tinh chinh alpha va mau o vien; cham hon, huu ich khi con vien trang.",
     )
     parser.add_argument(
         "--keep-model-colors",
@@ -41,6 +42,7 @@ def main():
 
     try:
         from PIL import Image, ImageOps
+        import onnxruntime as ort
         from rembg import new_session, remove
     except ImportError:
         print("Chua cai thu vien. Hay chay INSTALL.bat truoc.")
@@ -70,17 +72,25 @@ def main():
 
     print(f"Tim thay {len(files)} anh.")
     print(f"Mo hinh: {args.model}")
-    if args.alpha_matting:
-        print("Tinh chinh vien: alpha matting (cham hon)")
-    else:
-        print("Tinh chinh vien: khu loang mau")
+    print("Tinh chinh vien: khu loang mau")
+    available = ort.get_available_providers()
+    providers = (
+        ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        if "CUDAExecutionProvider" in available
+        else ["CPUExecutionProvider"]
+    )
     print("Dang khoi tao mo hinh AI (lan dau co the tai mo hinh)...\n")
     try:
-        session = new_session(args.model)
+        session = new_session(args.model, providers=providers)
     except Exception as error:
         print(f"Khong the tai mo hinh {args.model}: {error}")
         print("Kiem tra ket noi Internet trong lan chay dau tien.")
         return 1
+    active = session.inner_session.get_providers()
+    if "CUDAExecutionProvider" in active:
+        print("Xu ly bang: GPU NVIDIA")
+    else:
+        print("Xu ly bang: CPU (GPU CUDA chua san sang)")
 
     ok = fail = 0
     for i, src in enumerate(files, 1):
@@ -90,13 +100,6 @@ def main():
                 image = ImageOps.exif_transpose(opened).convert("RGB")
                 # Remove color left over from the original background on soft edges.
                 options = {"decontaminate": not args.keep_model_colors}
-                if args.alpha_matting:
-                    options.update(
-                        alpha_matting=True,
-                        alpha_matting_foreground_threshold=240,
-                        alpha_matting_background_threshold=10,
-                        alpha_matting_erode_size=10,
-                    )
                 result = remove(image, session=session, **options)
                 result.save(dst, "PNG")
             ok += 1
@@ -110,8 +113,7 @@ def main():
     print("Thanh cong:", ok)
     print("Loi:", fail)
     print("Ket qua:", output_dir)
-    if not args.alpha_matting:
-        print("Da bat khu loang mau vien. Neu can sua ca hinh dang mep, thu --alpha-matting.")
+    print("Da khu loang mau vien de giam vien mau nen.")
     print("==============================")
     return 0 if fail == 0 else 1
 
