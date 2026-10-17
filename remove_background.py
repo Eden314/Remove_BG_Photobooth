@@ -70,6 +70,10 @@ def main():
 
     print(f"Tim thay {len(files)} anh.")
     print(f"Mo hinh: {args.model}")
+    if args.alpha_matting:
+        print("Tinh chinh vien: alpha matting (cham hon)")
+    else:
+        print("Tinh chinh vien: khu loang mau")
     print("Dang khoi tao mo hinh AI (lan dau co the tai mo hinh)...\n")
     try:
         session = new_session(args.model)
