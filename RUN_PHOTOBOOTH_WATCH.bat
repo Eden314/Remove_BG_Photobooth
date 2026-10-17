@@ -12,11 +12,11 @@ if "%~1"=="" (
     exit /b 1
 )
 
-set "APP=%~dp0AI_Tach_Phong.exe"
-if not exist "%APP%" set "APP=%~dp0dist\AI_Tach_Phong\AI_Tach_Phong.exe"
+set "APP=%~dp0Photobooth.exe"
+if not exist "%APP%" set "APP=%~dp0dist\Photobooth\Photobooth.exe"
 if not exist "%APP%" (
-    echo [LOI] Khong tim thay AI_Tach_Phong.exe.
-    echo Hay chay BUILD_PORTABLE.bat hoac giai nen goi portable day du.
+    echo [LOI] Khong tim thay Photobooth.exe.
+    echo Hay chay BUILD_PACKAGES.bat hoac giai nen goi Photobooth day du.
     pause
     exit /b 1
 )

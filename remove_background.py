@@ -152,8 +152,13 @@ def wait_for_new_images(
         time.sleep(0.5)
 
 
-def main():
+def main(force_watch=False, allow_watch=True):
     args = parse_args()
+    if force_watch:
+        args.watch = True
+    elif args.watch and not allow_watch:
+        print("Remove_BG chi xu ly anh theo yeu cau; dung goi Photobooth de theo doi thu muc.")
+        return 1
     input_path = args.path.expanduser().resolve()
     if not input_path.exists():
         print("Khong tim thay tep/thu muc:", input_path)
