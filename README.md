@@ -1,5 +1,14 @@
 # Tách phông ảnh Windows
 
+## Cấu trúc thư mục
+
+- `src/`: mã Python của bộ tách ảnh và worker Photobooth.
+- `docs/`: hướng dẫn sử dụng riêng cho từng gói portable.
+- `RUN_*.bat`, `INSTALL.bat`, `BUILD_*.bat`: các lệnh chạy, cài đặt và đóng gói.
+- `build/`, `.build_models/`, `.directml-build-env/`: tệp sinh ra trong quá trình build.
+- `dist/`: các gói portable đã build.
+- `Image/`, `CamVot/`: dữ liệu ảnh của dự án.
+
 Dự án đóng gói hai ứng dụng độc lập bằng cùng một model `birefnet-general`:
 
 | Ứng dụng | Dùng khi | Cách chạy |
@@ -32,5 +41,6 @@ tốc độ phụ thuộc GPU, driver và các phép toán được tăng tốc 
 ## Build lại
 
 Trên máy build cài Python 3.12 x64, chạy `INSTALL.bat` để cài môi trường xử lý,
-tải model gốc rồi chạy `BUILD_PACKAGES.bat`. Kết quả nằm trong
+tải model gốc rồi chạy `BUILD_PACKAGES.bat`. Hướng dẫn riêng nằm trong thư mục
+[`docs`](docs/). Kết quả nằm trong
 `dist\Remove_BG` và `dist\Photobooth`. Build cần khoảng 4 GB dung lượng trống.

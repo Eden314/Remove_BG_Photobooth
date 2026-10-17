@@ -1,5 +1,6 @@
 """Build independent portable packages with DirectML and CPU fallback."""
 
+import argparse
 import importlib.metadata
 from pathlib import Path
 import shutil
@@ -9,6 +10,7 @@ from PyInstaller.__main__ import run as pyinstaller_run
 
 
 ROOT = Path(__file__).resolve().parent
+SRC_ROOT = ROOT / "src"
 MODEL = Path.home() / ".u2net" / "birefnet-general.onnx"
 MODEL_FP16 = ROOT / ".build_models" / "birefnet-general-fp16.onnx"
 DIST_ROOT = ROOT / "dist"
@@ -51,27 +53,36 @@ def ensure_fp16_model():
 def build_package(name, entry_script, runner, readme):
     output_dir = DIST_ROOT / name
     work_dir = ROOT / "build" / name
+    work_dir.mkdir(parents=True, exist_ok=True)
     args = [
         "--noconfirm",
         "--clean",
         "--onedir",
         "--console",
+        f"--specpath={work_dir}",
         f"--name={name}",
         f"--distpath={DIST_ROOT}",
         f"--workpath={work_dir}",
         f"--add-data={MODEL};models",
         f"--add-data={MODEL_FP16};models",
     ]
-    args.append(str(ROOT / entry_script))
+    args.append(str(SRC_ROOT / entry_script))
     print(f"\nDang dong goi {name}...", flush=True)
     pyinstaller_run(args)
 
     shutil.copy2(ROOT / runner, output_dir / runner)
-    shutil.copy2(ROOT / readme, output_dir / readme)
+    shutil.copy2(ROOT / readme, output_dir / Path(readme).name)
     print(f"Da tao: {output_dir}", flush=True)
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Build portable AI packages.")
+    parser.add_argument(
+        "--only",
+        choices=("Remove_BG", "Photobooth"),
+        help="Build only one package instead of rebuilding both.",
+    )
+    selected = parser.parse_args().only
     check_environment()
     ensure_fp16_model()
     print(f"Python build: {sys.executable}")
@@ -79,15 +90,20 @@ def main():
     print(f"Model FP16 for DirectML GPUs: {MODEL_FP16} ({MODEL_FP16.stat().st_size / (1024**3):.2f} GiB)")
     print("Backend: ONNX Runtime DirectML; CPU fallback.")
 
-    build_package(
-        "Remove_BG", "remove_bg_app.py", "RUN_REMOVE_BG_PORTABLE.bat",
-        "README_REMOVE_BG.txt",
-    )
-    build_package(
-        "Photobooth", "photobooth_worker.py", "RUN_PHOTOBOOTH_WATCH.bat",
-        "README_PHOTOBOOTH.txt",
-    )
-    print("\nBUILD HOAN TAT: dist\\Remove_BG va dist\\Photobooth")
+    packages = {
+        "Remove_BG": (
+            "remove_bg_app.py", "RUN_REMOVE_BG_PORTABLE.bat",
+            "docs/README_REMOVE_BG.txt",
+        ),
+        "Photobooth": (
+            "photobooth_worker.py", "RUN_PHOTOBOOTH_WATCH.bat",
+            "docs/README_PHOTOBOOTH.txt",
+        ),
+    }
+    names = [selected] if selected else list(packages)
+    for name in names:
+        build_package(name, *packages[name])
+    print("\nBUILD HOAN TAT: " + ", ".join(f"dist\\{name}" for name in names))
 
 
 if __name__ == "__main__":

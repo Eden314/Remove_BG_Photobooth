@@ -122,7 +122,11 @@ def create_session(ort, model_path, providers, use_directml=False):
 
 
 def wait_for_new_images(
-    folder: Path, processed: set, stable: dict, excluded: Path = None
+    folder: Path,
+    processed: set,
+    stable: dict,
+    excluded: Path = None,
+    ignored_paths: set = None,
 ):
     """Wait until new image files have stopped changing before opening them."""
     while True:
@@ -132,6 +136,9 @@ def wait_for_new_images(
                 continue
             if excluded and path.resolve() == excluded:
                 continue
+            path_key = str(path.resolve())
+            if ignored_paths and path_key in ignored_paths:
+                continue
             try:
                 stat = path.stat()
             except OSError:
@@ -139,10 +146,10 @@ def wait_for_new_images(
             identity = (str(path.resolve()), stat.st_size, stat.st_mtime_ns)
             if identity in processed:
                 continue
-            if stable.get(str(path.resolve())) == identity:
+            if stable.get(path_key) == identity:
                 ready.append((path, identity))
             else:
-                stable[str(path.resolve())] = identity
+                stable[path_key] = identity
         if ready:
             return ready
         time.sleep(0.5)
@@ -159,6 +166,19 @@ def main(force_watch=False, allow_watch=True):
     if not input_path.exists():
         print("Khong tim thay tep/thu muc:", input_path)
         return 1
+
+    if force_watch and not input_path.is_dir():
+        print("Che do photobooth can duong dan la thu muc.")
+        return 1
+    ignored_paths = set()
+    if force_watch:
+        # Snapshot immediately at startup, before model initialization. Existing
+        # images are deliberately ignored for the entire watch session.
+        ignored_paths = {
+            str(path.resolve())
+            for path in input_path.iterdir()
+            if path.is_file() and path.suffix.lower() in SUPPORTED
+        }
 
     print("Dang nap thu vien AI...", flush=True)
     bundled_model_dir = None
@@ -279,6 +299,11 @@ def main(force_watch=False, allow_watch=True):
     print(f"Thoi gian nap model/session: {time.perf_counter() - session_started:.2f} giay.")
 
     if args.watch:
+        if ignored_paths:
+            print(
+                f"Bo qua {len(ignored_paths)} anh da co luc khoi dong; "
+                "chi xu ly anh duoc them sau do."
+            )
         print("Che do photobooth: mo hinh se duoc giu san; nhan Ctrl+C de dung.")
     processed = set()
     stable = {}
@@ -287,7 +312,11 @@ def main(force_watch=False, allow_watch=True):
         if args.watch:
             try:
                 ready = wait_for_new_images(
-                    input_path, processed, stable, keep_mask_path
+                    input_path,
+                    processed,
+                    stable,
+                    keep_mask_path,
+                    ignored_paths,
                 )
             except KeyboardInterrupt:
                 print("\nDa dung worker Photobooth.", flush=True)
