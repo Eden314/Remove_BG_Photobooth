@@ -1,26 +1,8 @@
 import argparse
-import os
-import sys
 from pathlib import Path
 
 SUPPORTED = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 DEFAULT_MODEL = "birefnet-general"
-CUDA_DLL_HANDLES = []
-
-
-def register_cuda_dll_paths(ort):
-    """Let Windows find CUDA/cuDNN DLLs bundled in pip's NVIDIA packages."""
-    if sys.platform != "win32" or not hasattr(os, "add_dll_directory"):
-        return 0
-
-    site_packages = Path(ort.__file__).resolve().parent.parent
-    nvidia_dir = site_packages / "nvidia"
-    if not nvidia_dir.is_dir():
-        return 0
-
-    for dll_dir in nvidia_dir.glob("*/bin"):
-        CUDA_DLL_HANDLES.append(os.add_dll_directory(str(dll_dir)))
-    return len(CUDA_DLL_HANDLES)
 
 
 def parse_args():
@@ -98,9 +80,12 @@ def main():
         else ["CPUExecutionProvider"]
     )
     if providers[0] == "CUDAExecutionProvider":
-        dll_dir_count = register_cuda_dll_paths(ort)
-        if dll_dir_count:
-            print(f"Da dang ky {dll_dir_count} thu muc DLL CUDA/cuDNN.")
+        if hasattr(ort, "preload_dlls"):
+            print("Dang nap thu vien CUDA/cuDNN...")
+            try:
+                ort.preload_dlls(directory="")
+            except Exception as error:
+                print(f"Khong the nap DLL CUDA/cuDNN: {error}")
     print("Dang khoi tao mo hinh AI (lan dau co the tai mo hinh)...\n")
     try:
         session = new_session(args.model, providers=providers)
