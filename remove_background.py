@@ -13,9 +13,14 @@ def register_cuda_dll_paths(ort):
     nvidia_dir = site_packages / "nvidia"
     if not nvidia_dir.is_dir() or not hasattr(os, "add_dll_directory"):
         return 0
-    for dll_dir in nvidia_dir.glob("*/bin"):
+    dll_dirs = sorted(nvidia_dir.glob("*/bin"))
+    for dll_dir in dll_dirs:
         CUDA_DLL_HANDLES.append(os.add_dll_directory(str(dll_dir)))
-    return len(CUDA_DLL_HANDLES)
+    if dll_dirs:
+        os.environ["PATH"] = os.pathsep.join(
+            [*(str(path) for path in dll_dirs), os.environ.get("PATH", "")]
+        )
+    return len(dll_dirs)
 
 
 def parse_args():
@@ -96,7 +101,7 @@ def main():
         dll_dir_count = register_cuda_dll_paths(ort)
         if dll_dir_count:
             print(f"Da dang ky {dll_dir_count} thu muc DLL CUDA/cuDNN.")
-        if hasattr(ort, "preload_dlls"):
+        if dll_dir_count == 0 and hasattr(ort, "preload_dlls"):
             print("Dang nap thu vien CUDA/cuDNN...")
             try:
                 ort.preload_dlls(directory="")
