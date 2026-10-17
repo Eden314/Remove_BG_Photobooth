@@ -3,6 +3,8 @@
 __pycache__/
 *.py[cod]
 /.portable-build-env/
+/.directml-build-env/
+/.directml-build-env312/
 /.build_models/
 /build/
 /dist/

@@ -7,11 +7,16 @@ Dự án đóng gói hai ứng dụng độc lập bằng cùng một model `bir
 | Remove_BG | Tách một ảnh hoặc một thư mục ảnh theo yêu cầu | Kéo ảnh/thư mục vào `RUN_REMOVE_BG_PORTABLE.bat` |
 | Photobooth | Chạy liên tục, giữ model trong RAM/VRAM và tự xử lý ảnh mới | Chạy `RUN_PHOTOBOOTH_WATCH.bat "D:\Anh\Input"` |
 
+Cả hai gói dùng ONNX Runtime DirectML để tăng tốc trên GPU DirectX 12 của nhiều
+hãng (NVIDIA, AMD, Intel); nếu GPU/driver không hỗ trợ hoặc khởi tạo lỗi thì tự
+chuyển sang CPU. DirectML yêu cầu Windows 10 phiên bản 1903 trở lên và driver GPU
+phù hợp. Không cần cài CUDA Toolkit hay cuDNN.
+
 ## Dùng gói đã build
 
 Lấy riêng thư mục `dist\Remove_BG` hoặc `dist\Photobooth` tùy chức năng. Mỗi
-thư mục là một gói portable tự chứa Python runtime, thư viện, CUDA/cuDNN và
-model. Sao chép toàn bộ thư mục sang Windows x64; không cần cài Python hay pip.
+thư mục là một gói portable tự chứa Python runtime, thư viện DirectML và model.
+Sao chép toàn bộ thư mục sang Windows x64; không cần cài Python hay pip.
 Không tách riêng EXE khỏi thư mục `_internal`.
 
 Photobooth theo dõi thư mục đầu vào. Phần mềm chụp ảnh cần lưu ảnh gốc vào đó;
@@ -20,12 +25,12 @@ Photobooth mở trong phiên, nhấn Ctrl+C để dừng. Model chỉ được n
 phiên chạy.
 
 Hai gói có model và runtime riêng để có thể mang từng gói sang máy khác độc lập.
-Vì vậy tổng dung lượng của cả hai gói lớn hơn dùng một gói chung. Model vẫn là
-BiRefNet General duy nhất; đổi cách đóng gói không làm tăng độ chính xác hay đảm
-bảo mọi vật thể cầm tay đều được giữ lại.
+Model vẫn là BiRefNet General duy nhất; đổi backend không làm tăng độ chính xác
+hay đảm bảo mọi vật thể cầm tay đều được giữ lại. DirectML có hỗ trợ rộng nhưng
+tốc độ phụ thuộc GPU, driver và các phép toán được tăng tốc trên từng thiết bị.
 
 ## Build lại
 
-Trên máy build cài Python 3.10 x64, chạy `INSTALL.bat` để cài môi trường xử lý,
+Trên máy build cài Python 3.12 x64, chạy `INSTALL.bat` để cài môi trường xử lý,
 tải model gốc rồi chạy `BUILD_PACKAGES.bat`. Kết quả nằm trong
-`dist\Remove_BG` và `dist\Photobooth`. Build cần khoảng 10 GB dung lượng trống.
+`dist\Remove_BG` và `dist\Photobooth`. Build cần khoảng 4 GB dung lượng trống.

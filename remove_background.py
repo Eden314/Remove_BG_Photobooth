@@ -14,23 +14,6 @@ MODEL_URL = (
     "BiRefNet-general-epoch_244.onnx"
 )
 MODEL_MD5 = "7a35a0141cbbc80de11d9c9a28f52697"
-CUDA_DLL_HANDLES = []
-
-
-def register_cuda_dll_paths(ort):
-    """Expose CUDA/cuDNN DLL folders bundled in pip's NVIDIA packages."""
-    site_packages = Path(ort.__file__).resolve().parent.parent
-    nvidia_dir = site_packages / "nvidia"
-    if not nvidia_dir.is_dir() or not hasattr(os, "add_dll_directory"):
-        return 0
-    dll_dirs = sorted(nvidia_dir.glob("*/bin"))
-    for dll_dir in dll_dirs:
-        CUDA_DLL_HANDLES.append(os.add_dll_directory(str(dll_dir)))
-    if dll_dirs:
-        os.environ["PATH"] = os.pathsep.join(
-            [*(str(path) for path in dll_dirs), os.environ.get("PATH", "")]
-        )
-    return len(dll_dirs)
 
 
 def parse_args():
@@ -49,7 +32,7 @@ def parse_args():
     parser.add_argument(
         "--cpu",
         action="store_true",
-        help="Ep buoc xu ly bang CPU, khong thu dung GPU NVIDIA.",
+        help="Ep buoc xu ly bang CPU, khong thu dung GPU DirectML.",
     )
     parser.add_argument(
         "--watch",
@@ -123,6 +106,19 @@ def predict_mask(session, image, np, Image):
         (np.squeeze(prediction) * 255).astype("uint8"), mode="L"
     )
     return mask.resize(image.size, Image.Resampling.LANCZOS)
+
+
+def create_session(ort, model_path, providers, use_directml=False):
+    options = None
+    if use_directml:
+        options = ort.SessionOptions()
+        options.enable_mem_pattern = False
+        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        # Large BiRefNet graphs can exceed consumer GPU memory with DML fusion.
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+    return ort.InferenceSession(
+        str(model_path), sess_options=options, providers=providers
+    )
 
 
 def wait_for_new_images(
@@ -226,21 +222,12 @@ def main(force_watch=False, allow_watch=True):
     print(f"Mo hinh: {args.model}")
     print("Tinh chinh vien alpha theo kich thuoc anh goc")
     available = ort.get_available_providers()
+    gpu_provider = "DmlExecutionProvider"
     providers = (
-        ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        if "CUDAExecutionProvider" in available and not args.cpu
+        [gpu_provider, "CPUExecutionProvider"]
+        if gpu_provider in available and not args.cpu
         else ["CPUExecutionProvider"]
     )
-    if providers[0] == "CUDAExecutionProvider":
-        dll_dir_count = register_cuda_dll_paths(ort)
-        if dll_dir_count:
-            print(f"Da dang ky {dll_dir_count} thu muc DLL CUDA/cuDNN.")
-        if dll_dir_count == 0 and hasattr(ort, "preload_dlls"):
-            print("Dang nap thu vien CUDA/cuDNN...")
-            try:
-                ort.preload_dlls(directory="")
-            except Exception as error:
-                print(f"Khong the nap DLL CUDA/cuDNN: {error}")
     model_home = bundled_model_dir or Path(
         os.environ.get("U2NET_HOME", Path.home() / ".u2net")
     )
@@ -250,22 +237,34 @@ def main(force_watch=False, allow_watch=True):
     print("Dang khoi tao mo hinh AI...\n")
     try:
         cpu_model_path = model_file(model_home)
-        model_path = cpu_model_path
         fp16_path = model_home / FP16_MODEL
-        if "CUDAExecutionProvider" in providers and fp16_path.is_file():
-            model_path = fp16_path
-            print("GPU dung ban FP16 da toi uu; CPU du phong van dung model goc.")
-        session = ort.InferenceSession(
-            str(model_path), providers=providers
-        )
+        if gpu_provider in providers:
+            model_path = fp16_path if fp16_path.is_file() else cpu_model_path
+            try:
+                session = create_session(
+                    ort, model_path, providers, use_directml=True
+                )
+                if model_path == fp16_path:
+                    print("DirectML dung model FP16 de giam bo nho GPU.")
+            except Exception as fp16_error:
+                if model_path == cpu_model_path:
+                    raise
+                print(f"DirectML khong nap duoc FP16 ({fp16_error}); thu model FP32.")
+                model_path = cpu_model_path
+                session = create_session(
+                    ort, model_path, providers, use_directml=True
+                )
+        else:
+            model_path = cpu_model_path
+            session = create_session(ort, model_path, providers)
     except Exception as error:
-        if "CUDAExecutionProvider" in providers:
-            print(f"CUDA khong khoi tao duoc ({error}); thu lai bang CPU.")
+        if gpu_provider in providers:
+            print(f"DirectML khong khoi tao duoc ({error}); thu lai bang CPU.")
             try:
                 cpu_model_path = cpu_model_path or model_file(model_home)
                 model_path = cpu_model_path
                 providers = ["CPUExecutionProvider"]
-                session = ort.InferenceSession(str(model_path), providers=providers)
+                session = create_session(ort, model_path, providers)
             except Exception as cpu_error:
                 print(f"Khong the khoi tao ONNX Runtime tren CPU: {cpu_error}")
                 return 1
@@ -273,10 +272,10 @@ def main(force_watch=False, allow_watch=True):
             print(f"Khong the khoi tao model {args.model}: {error}")
             return 1
     active = session.get_providers()
-    if "CUDAExecutionProvider" in active:
-        print("CUDA provider da khoi tao; dang thu suy luan tren GPU NVIDIA.")
+    if gpu_provider in active:
+        print("DirectML da khoi tao; dang su dung GPU DirectX 12 neu cac toan tu duoc ho tro.")
     else:
-        print("Xu ly bang: CPU (GPU CUDA chua san sang)")
+        print("Xu ly bang: CPU (DirectML/GPU khong san sang hoac da tat)")
     print(f"Thoi gian nap model/session: {time.perf_counter() - session_started:.2f} giay.")
 
     if args.watch:
@@ -286,9 +285,13 @@ def main(force_watch=False, allow_watch=True):
     totals = {"ok": 0, "fail": 0}
     while True:
         if args.watch:
-            ready = wait_for_new_images(
-                input_path, processed, stable, keep_mask_path
-            )
+            try:
+                ready = wait_for_new_images(
+                    input_path, processed, stable, keep_mask_path
+                )
+            except KeyboardInterrupt:
+                print("\nDa dung worker Photobooth.", flush=True)
+                break
             files = [item[0] for item in ready]
             identities = {item[0]: item[1] for item in ready}
             print(f"Nhan duoc {len(files)} anh moi.", flush=True)
@@ -304,16 +307,33 @@ def main(force_watch=False, allow_watch=True):
                     try:
                         mask = predict_mask(session, image, np, Image)
                     except Exception as gpu_error:
-                        if "CUDAExecutionProvider" not in providers:
+                        if gpu_provider not in providers:
                             raise
-                        print(f"\nCUDA gap loi khi suy luan ({gpu_error}); dang thu lai bang CPU.")
-                        providers = ["CPUExecutionProvider"]
-                        model_path = cpu_model_path
-                        session = ort.InferenceSession(
-                            str(model_path), providers=providers
+                        print(
+                            f"\nDirectML gap loi khi suy luan ({gpu_error}); "
+                            "thu model FP32 tren GPU truoc."
                         )
-                        print("Da chuyen sang CPU.")
-                        mask = predict_mask(session, image, np, Image)
+                        if model_path != cpu_model_path:
+                            try:
+                                model_path = cpu_model_path
+                                session = create_session(
+                                    ort, model_path, providers, use_directml=True
+                                )
+                                mask = predict_mask(session, image, np, Image)
+                            except Exception as fp32_error:
+                                print(
+                                    f"DirectML FP32 khong chay duoc ({fp32_error}); "
+                                    "dang chuyen sang CPU."
+                                )
+                                providers = ["CPUExecutionProvider"]
+                                session = create_session(ort, cpu_model_path, providers)
+                                print("Da chuyen sang CPU.")
+                                mask = predict_mask(session, image, np, Image)
+                        else:
+                            providers = ["CPUExecutionProvider"]
+                            session = create_session(ort, cpu_model_path, providers)
+                            print("Da chuyen sang CPU.")
+                            mask = predict_mask(session, image, np, Image)
                     result = image.convert("RGBA")
                     result.putalpha(mask)
                     if keep_mask_path:
@@ -328,14 +348,14 @@ def main(force_watch=False, allow_watch=True):
                             )
                             result.putalpha(alpha)
                     result.save(dst, "PNG")
-                    if i == 1 and "CUDAExecutionProvider" in providers:
+                    if i == 1 and gpu_provider in providers:
                         active = session.get_providers()
-                        if "CUDAExecutionProvider" in active:
-                            print("Xac nhan: anh dang duoc suy luan tren GPU NVIDIA.")
+                        if gpu_provider in active:
+                            print("Xac nhan: DirectML provider da duoc chon cho session.")
                         else:
                             print(
-                                "CANH BAO: CUDA/cuDNN loi; ONNX Runtime da chuyen sang CPU. "
-                                "Hay cap nhat driver NVIDIA de tuong thich voi CUDA 12.8."
+                                "CANH BAO: DirectML khong kha dung; ONNX Runtime da chuyen sang CPU. "
+                                "Hay cap nhat driver GPU va kiem tra ho tro DirectX 12."
                             )
                 ok += 1
                 totals["ok"] += 1

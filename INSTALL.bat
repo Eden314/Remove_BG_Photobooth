@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title Cai dat AI Tach Phong - BiRefNet
+title Cai dat AI Tach Phong - BiRefNet DirectML
 
 echo ==============================================
 echo       CAI DAT AI TACH PHONG - WINDOWS
@@ -18,6 +18,15 @@ if errorlevel 1 (
 
 echo [1/4] Kiem tra Python...
 python -c "import sys,struct; print('Python:',sys.version.split()[0]); print('Architecture:',struct.calcsize('P')*8,'bit')"
+
+python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)"
+if errorlevel 1 (
+    echo.
+    echo [LOI] DirectML can Python 3.11 tro len. Hay dung Python 3.12.
+    echo.
+    pause
+    exit /b 1
+)
 
 python -c "import struct; raise SystemExit(0 if struct.calcsize('P')*8==64 else 1)"
 if errorlevel 1 (
@@ -42,14 +51,14 @@ echo.
 echo [3/4] Cai cac thu vien AI...
 echo.
 
-python -m pip uninstall -y onnxruntime onnxruntime-gpu
+python -m pip uninstall -y onnxruntime onnxruntime-gpu onnxruntime-directml
 if errorlevel 1 (
     echo [LOI] Khong the go ONNX Runtime cu.
     pause
     exit /b 1
 )
 
-python -m pip install --upgrade --only-binary=:all: pillow numpy "onnxruntime-gpu[cuda,cudnn]"
+python -m pip install --upgrade --only-binary=:all: pillow numpy onnxruntime-directml==1.24.4
 if errorlevel 1 (
     echo.
     echo ==============================================
@@ -82,7 +91,8 @@ echo ==============================================
 echo.
 echo Bay gio ban co the keo thu muc anh vao:
 echo RUN_REMOVE_BG.bat
-echo Mo hinh birefnet-portrait se duoc tai trong lan xu ly dau tien.
+echo GPU DirectX 12 duoc uu tien bang DirectML; neu khong kha dung se dung CPU.
+echo Mo hinh birefnet-general se duoc tai trong lan xu ly dau tien.
 echo.
 echo ==============================================
 pause
