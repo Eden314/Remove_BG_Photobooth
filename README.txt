@@ -5,22 +5,28 @@ HUONG DAN TACH PHONG CHAN DUNG
 3. Keo mot tep anh hoac thu muc anh vao RUN_REMOVE_BG.bat.
 4. Anh PNG trong suot nam trong thu muc output_no_bg ben canh anh goc.
 
-Mac dinh dung birefnet-general, xu ly tren GPU NVIDIA neu da cai dat bang
-INSTALL.bat. May co RTX 3050 Ti se duoc chay bang GPU thay vi CPU. Model duoc
-tai trong lan chay dau tien, can ket noi Internet. Alpha matting da duoc bo
-vi co the lam vien bi loi pixel; chuong trinh chi khu loang mau vien.
-Anh goc khong doi.
+Mac dinh dung model birefnet-general. Chuong trinh chay tren GPU NVIDIA neu CUDA
+san sang, neu khong se tu chuyen sang CPU. Model duoc tai mot lan va luu trong
+cache; lan dau can Internet. Anh goc khong doi.
 
-Neu muon uu tien toc do hon nua, chon ban nhe:
-  RUN_REMOVE_BG.bat "D:\Anh" --model birefnet-general-lite
+Neu AI xoa nham mot vat can giu (vi du may anh dang cam), tao mot tep mask
+den-trang cung kich thuoc voi anh: to trang len vat can giu, de nen mau den.
+Sau do chay:
+  RUN_REMOVE_BG.bat "D:\Anh\ChânDung6.jpg" --keep-mask "D:\Anh\ChânDung6-keep.png"
+Vung trang trong mask se duoc giu lai; vung den van theo ket qua AI. Co the dung
+Paint.NET, GIMP hoac phan mem ve co lop de to mask. Mask cung co the co mau xam
+de tao vien mem. Cach nay sua dung anh cu the, khong can huan luyen lai model.
 
-Neu chu the la chan dung va can thu model uu tien nguoi:
-  RUN_REMOVE_BG.bat "D:\Anh" --model birefnet-portrait
+De xu ly nhieu anh bang mot lan nap model, dua ca thu muc vao RUN_REMOVE_BG.bat.
+De dung photobooth va nap model mot lan cho ca phien chup, chay:
+  RUN_PHOTOBOOTH_WATCH.bat "D:\Anh\Input"
+De ung dung chup anh vao thu muc Input; PNG duoc tao trong Input\output_no_bg.
+Giu cua so worker mo; nhan Ctrl+C de dung. Cua so in thoi gian nap model/session
+va thoi gian xu ly moi anh de tach ro phan khoi dong voi phan suy luan.
 
-Neu can so sanh voi model cu:
-  RUN_REMOVE_BG.bat "D:\Anh" --model isnet-general-use
-
-Khi bat dau, dong "Xu ly bang" se cho biet dang dung GPU NVIDIA hay CPU.
+Toc do tuy thuoc model, GPU va driver; khong the bao dam duoi 10 giay tren moi
+may. Dung che do WATCH de giu session trong RAM/VRAM, khong khoi dong lai app
+cho tung tam anh. CUDA Graph chua bat vi driver/model tren may build loi capture.
 
 Ho tro JPG, JPEG, PNG, WEBP, BMP. Ket qua PNG co kenh alpha trong suot.
 Khong co mo hinh nao bao dam giu dung moi vat the trong moi anh; model tong quat

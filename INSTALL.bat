@@ -49,7 +49,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python -m pip install --upgrade --only-binary=:all: "rembg[gpu]" pillow "onnxruntime-gpu[cuda,cudnn]"
+python -m pip install --upgrade --only-binary=:all: pillow numpy "onnxruntime-gpu[cuda,cudnn]"
 if errorlevel 1 (
     echo.
     echo ==============================================
@@ -65,7 +65,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Kiem tra...
-python -c "from rembg import remove; from PIL import Image; import onnxruntime; print('rembg: OK'); print('Pillow: OK'); print('ONNX Runtime:',onnxruntime.__version__); print('Providers:',onnxruntime.get_available_providers())"
+python -c "from PIL import Image; import numpy,onnxruntime; print('Pillow: OK'); print('NumPy:',numpy.__version__); print('ONNX Runtime:',onnxruntime.__version__); print('Providers:',onnxruntime.get_available_providers())"
 
 if errorlevel 1 (
     echo.

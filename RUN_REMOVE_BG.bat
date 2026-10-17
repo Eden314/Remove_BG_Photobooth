@@ -9,7 +9,7 @@ if "%~1"=="" (
     exit /b
 )
 
-python "%~dp0remove_background.py" "%~1" %2 %3 %4 %5
+python -u "%~dp0remove_background.py" "%~1" %2 %3 %4 %5 %6 %7 %8 %9
 
 if errorlevel 1 (
     echo.
