@@ -1,6 +1,5 @@
-"""Build independent portable packages with DirectML and CPU fallback."""
+"""Build the standalone Photobooth package with DirectML and CPU fallback."""
 
-import argparse
 import importlib.metadata
 from pathlib import Path
 import shutil
@@ -76,13 +75,6 @@ def build_package(name, entry_script, runner, readme):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build portable AI packages.")
-    parser.add_argument(
-        "--only",
-        choices=("Remove_BG", "Photobooth"),
-        help="Build only one package instead of rebuilding both.",
-    )
-    selected = parser.parse_args().only
     check_environment()
     ensure_fp16_model()
     print(f"Python build: {sys.executable}")
@@ -90,20 +82,11 @@ def main():
     print(f"Model FP16 for DirectML GPUs: {MODEL_FP16} ({MODEL_FP16.stat().st_size / (1024**3):.2f} GiB)")
     print("Backend: ONNX Runtime DirectML; CPU fallback.")
 
-    packages = {
-        "Remove_BG": (
-            "remove_bg_app.py", "RUN_REMOVE_BG_PORTABLE.bat",
-            "docs/README_REMOVE_BG.txt",
-        ),
-        "Photobooth": (
-            "photobooth_worker.py", "RUN_PHOTOBOOTH_WATCH.bat",
-            "docs/README_PHOTOBOOTH.txt",
-        ),
-    }
-    names = [selected] if selected else list(packages)
-    for name in names:
-        build_package(name, *packages[name])
-    print("\nBUILD HOAN TAT: " + ", ".join(f"dist\\{name}" for name in names))
+    build_package(
+        "Photobooth", "photobooth_worker.py", "RUN_PHOTOBOOTH_WATCH.bat",
+        "docs/README_PHOTOBOOTH.txt",
+    )
+    print("\nBUILD HOAN TAT: dist\\Photobooth")
 
 
 if __name__ == "__main__":

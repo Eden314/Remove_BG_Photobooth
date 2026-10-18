@@ -1,10 +1,10 @@
 @echo off
 setlocal
-title Build AI Tach Phong Packages
+title Build Photobooth Package
 cd /d "%~dp0"
 
 echo ==============================================
-echo   BUILD 2 GOI PORTABLE DOC LAP - WINDOWS x64
+echo   BUILD GOI PHOTOBOOTH PORTABLE - WINDOWS x64
 echo ==============================================
 echo.
 
@@ -41,15 +41,14 @@ echo Cai cong cu build vao moi truong rieng...
 ".directml-build-env\Scripts\python.exe" -m pip install --only-binary=:all: pyinstaller pillow numpy onnx==1.18.0 onnxruntime-directml==1.24.4
 if errorlevel 1 goto :error
 
-echo Tao hai goi portable DirectML. Can khoang 4 GB dung luong trong.
-".directml-build-env\Scripts\python.exe" build_portable.py
+echo Tao goi Photobooth portable DirectML. Can khoang 2 GB dung luong trong.
+".directml-build-env\Scripts\python.exe" build_photobooth.py
 if errorlevel 1 goto :error
 
 echo.
 echo DA TAO:
-echo %CD%\dist\Remove_BG
 echo %CD%\dist\Photobooth
-echo Moi goi la doc lap va can giai nen day du tren may Windows x64.
+echo Goi doc lap, giai nen day du tren may Windows x64.
 echo.
 pause
 exit /b 0

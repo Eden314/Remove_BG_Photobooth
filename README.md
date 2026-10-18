@@ -1,46 +1,38 @@
-# Tách phông ảnh Windows
+# Photobooth Background Removal
 
-## Cấu trúc thư mục
+Photobooth worker for Windows x64. It keeps BiRefNet General loaded for a photo
+session and processes only supported images added to the watched folder after
+the worker starts. Images already present at startup are skipped.
 
-- `src/`: mã Python của bộ tách ảnh và worker Photobooth.
-- `docs/`: hướng dẫn sử dụng riêng cho từng gói portable.
-- `RUN_*.bat`, `INSTALL.bat`, `BUILD_*.bat`: các lệnh chạy, cài đặt và đóng gói.
-- `build/`, `.build_models/`, `.directml-build-env/`: tệp sinh ra trong quá trình build.
-- `dist/`: các gói portable đã build.
-- `Image/`, `CamVot/`: dữ liệu ảnh của dự án.
+## Run the portable package
 
-Dự án đóng gói hai ứng dụng độc lập bằng cùng một model `birefnet-general`:
+Copy the complete `dist\Photobooth` folder to the target computer. Keep
+`Photobooth.exe`, `_internal`, the model, the launcher, and the readme together.
+Python and the project dependencies do not need to be installed on the target
+computer.
 
-| Ứng dụng | Dùng khi | Cách chạy |
-|---|---|---|
-| Remove_BG | Tách một ảnh hoặc một thư mục ảnh theo yêu cầu | Kéo ảnh/thư mục vào `RUN_REMOVE_BG_PORTABLE.bat` |
-| Photobooth | Chạy liên tục, giữ model trong RAM/VRAM và tự xử lý ảnh mới | Chạy `RUN_PHOTOBOOTH_WATCH.bat "D:\Anh\Input"` |
+Run:
 
-Cả hai gói dùng ONNX Runtime DirectML để tăng tốc trên GPU DirectX 12 của nhiều
-hãng (NVIDIA, AMD, Intel); nếu GPU/driver không hỗ trợ hoặc khởi tạo lỗi thì tự
-chuyển sang CPU. DirectML yêu cầu Windows 10 phiên bản 1903 trở lên và driver GPU
-phù hợp. Không cần cài CUDA Toolkit hay cuDNN.
+```powershell
+.\RUN_PHOTOBOOTH_WATCH.bat "D:\Photobooth\Input"
+```
 
-## Dùng gói đã build
+Save new photos into the input folder after the worker starts. Transparent PNG
+results are written to `Input\output_no_bg`. Press Ctrl+C to stop the session.
+DirectML is used when available; otherwise processing falls back to CPU.
 
-Lấy riêng thư mục `dist\Remove_BG` hoặc `dist\Photobooth` tùy chức năng. Mỗi
-thư mục là một gói portable tự chứa Python runtime, thư viện DirectML và model.
-Sao chép toàn bộ thư mục sang Windows x64; không cần cài Python hay pip.
-Không tách riêng EXE khỏi thư mục `_internal`.
+## Build the package
 
-Photobooth theo dõi thư mục đầu vào. Phần mềm chụp ảnh cần lưu ảnh gốc vào đó;
-khi tệp ảnh đã ghi xong, kết quả PNG xuất hiện trong `output_no_bg`. Giữ cửa sổ
-Photobooth mở trong phiên, nhấn Ctrl+C để dừng. Model chỉ được nạp một lần mỗi
-phiên chạy.
+On the build computer, install Python 3.12 x64 and download the
+`birefnet-general.onnx` model into `%USERPROFILE%\.u2net`. Run
+`BUILD_PHOTOBOOTH.bat`; the portable package is created in `dist\Photobooth`.
+The build includes the Python runtime, DirectML runtime, and both model
+precisions. Do not commit `dist/` to GitHub; share it as a separate release
+asset or copy the folder directly to the target computer.
 
-Hai gói có model và runtime riêng để có thể mang từng gói sang máy khác độc lập.
-Model vẫn là BiRefNet General duy nhất; đổi backend không làm tăng độ chính xác
-hay đảm bảo mọi vật thể cầm tay đều được giữ lại. DirectML có hỗ trợ rộng nhưng
-tốc độ phụ thuộc GPU, driver và các phép toán được tăng tốc trên từng thiết bị.
+## Project layout
 
-## Build lại
-
-Trên máy build cài Python 3.12 x64, chạy `INSTALL.bat` để cài môi trường xử lý,
-tải model gốc rồi chạy `BUILD_PACKAGES.bat`. Hướng dẫn riêng nằm trong thư mục
-[`docs`](docs/). Kết quả nằm trong
-`dist\Remove_BG` và `dist\Photobooth`. Build cần khoảng 4 GB dung lượng trống.
+- `src/`: Photobooth worker and shared image-segmentation engine.
+- `docs/`: Vietnamese user guide.
+- `build_photobooth.py`, `BUILD_PHOTOBOOTH.bat`: portable build scripts.
+- `RUN_PHOTOBOOTH_WATCH.bat`: launches the portable worker.
