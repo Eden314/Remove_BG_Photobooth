@@ -1,10 +1,15 @@
 PHOTOBOOTH - GOI WORKER GIU MODEL SAN SANG
 
+Neu chay tu ma nguon tren may co Python 3.12 x64, chay INSTALL.bat mot lan.
+Moi truong rieng .photobooth-env se duoc tao. Sau do chay launcher ben duoi;
+model tu tai trong lan chay dau tien va can ket noi Internet.
+
 Chay:
   RUN_PHOTOBOOTH_WATCH.bat "D:\Anh\Input"
 
-Cho phan mem chup anh luu anh goc vao thu muc Input. Worker se doi anh ghi xong,
-tu dong tach nen va xuat PNG vao Input\output_no_bg. Giu cua so worker mo suot
+Anh da co trong Input luc worker khoi dong se bi bo qua. Chi anh duoc them sau
+khi worker chay moi duoc xu ly. Worker doi anh ghi xong, tu dong tach nen va
+xuat PNG vao Input\output_no_bg. Giu cua so worker mo suot
 phien chup; nhan Ctrl+C khi ket thuc. Model/session duoc nap mot lan moi phien,
 khong nap lai cho tung anh.
 
